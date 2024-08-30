@@ -1,0 +1,85 @@
+import bpy
+import bmesh
+import random
+
+# Define the materials you want to assign
+materials = [1, 2, 3]
+
+# Define the limit for the number of islands to process
+island_limit = 100
+
+# Ensure the object is selected and in Object mode
+obj = bpy.context.active_object
+
+if obj and obj.type == 'MESH'
+    # Ensure the object has the materials
+    for mat_name in materials
+        if mat_name not in obj.data.materials
+            mat = bpy.data.materials.get(mat_name)
+            if mat
+                obj.data.materials.append(mat)
+            else
+                print(fMaterial '{mat_name}' not found!)
+
+    # Switch to Edit mode
+    bpy.ops.object.mode_set(mode='EDIT')
+
+    # Create a BMesh object from the mesh
+    bm = bmesh.from_edit_mesh(obj.data)
+
+    # Deselect all faces
+    for face in bm.faces
+        face.select_set(False)
+
+    island_count = 0
+
+    # Iterate through all faces to find islands
+    while island_count  island_limit and bm.faces
+        face = next((f for f in bm.faces if not f.select), None)
+        if not face
+            break
+        
+        # Select linked faces (an island)
+        face.select_set(True)
+        bpy.ops.mesh.select_linked()
+        selected_faces = [f for f in bm.faces if f.select]
+
+        if selected_faces
+            # Randomly choose a material index
+            material_name = random.choice(materials)
+            mat_index = obj.data.materials.find(material_name)
+
+            # Assign the material to the selected faces
+            for f in selected_faces
+                f.material_index = mat_index
+
+            # Update the mesh with the new material assignments
+            bmesh.update_edit_mesh(obj.data)
+
+            # Separate the selected island into a new object
+            bpy.ops.mesh.separate(type='SELECTED')
+            island_count += 1
+
+            # After separation, select the original object again
+            bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.context.view_layer.objects.active = obj
+            obj.select_set(True)
+            bpy.ops.object.mode_set(mode='EDIT')
+
+            # Update the BMesh after separation
+            bm = bmesh.from_edit_mesh(obj.data)
+
+            # Deselect all faces before processing the next island
+            for f in bm.faces
+                f.select_set(False)
+
+    # Switch back to Object mode
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    # Rename and organize new objects
+    base_name = obj.name
+    for i, new_obj in enumerate(bpy.context.selected_objects)
+        new_obj.name = f{base_name}_Island_{i+1}
+
+else
+    print(Please select a mesh object before running the script.)
